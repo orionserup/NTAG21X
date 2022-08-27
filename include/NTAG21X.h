@@ -29,6 +29,7 @@ typedef enum NTAG21XCOMMAND {
 
     REQUEST         = 0x26,     ///< Request To Connect to A TAG / 7-bits
     WAKEUP          = 0x52,     ///< Wakeup the Device From A Halt
+    HALT            = 0x50,     ///< Halts the Device But stays connected
     GET_VERSION     = 0x60,     ///< Get the Product Version Information
     READ            = 0x30,     ///< Reads 8 bytes for the Tag
     FAST_READ       = 0x3A,     ///< Reads A Variable Number of Bytes from the Device

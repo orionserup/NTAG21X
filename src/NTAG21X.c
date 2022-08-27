@@ -57,13 +57,20 @@ NTAG21X* NTAG21XInit(NTAG21X* const dev, NTAG21XConfig* const config) {
 
     assert(dev && config);
 
+    if(config->detectcollision == NULL) // we need to be able to detect collisions
+        return NULL;
+
+    if(config->receive_bits == NULL) // we need to be able to receive data from the air
+        return NULL;
+
+    if(config->transmit_bits == NULL) // we need to be able to transmit data over the air
+        return NULL;
+
+    // if we can't calculate crc16 then we need to be able to use hw crc to transmit and recv
+    if(config->calculate_crc16 = NULL && (config->receive_bits_crc == NULL || config->transmit_bits_crc == NULL))
+        return NULL;
+
     memcpy(&dev->config, config, sizeof(NTAG21XConfig));
-
-    const NTAG21XType tag = dev->config.tag;
-
-    const uint8_t cfgpage = tag == NTAG_213? 0x29:
-                            tag == NTAG_215? 0x83:
-                            tag == NTAG_216? 0xE3: 0xFF;
 
     return dev;
 
@@ -72,6 +79,9 @@ NTAG21X* NTAG21XInit(NTAG21X* const dev, NTAG21XConfig* const config) {
 void NTAG21XDeinit(NTAG21X* const dev) {
 
     assert(dev);
+
+    NTAG21XHalt(dev);
+    NTAG21XDisconnnect(dev);
 
     dev->config = NTAG21XDefaultConfig();
     dev->settings = NTAG21XDefaultSettings();
@@ -85,12 +95,53 @@ bool NTAG21XConnect(NTAG21X* const dev, const uint8_t uid[7]) {
 
     assert(dev && uid);
 
+    static uint8_t buffer[7] = {0};
+    buffer[0] = SELECT_CL1;
+    buffer[1] = 0x70; // the whole packet is 6 bytes 0 bits
+    memcpy(buffer + 2, uid, 4);
 
+    dev->config.transmit_bits(buffer, 8 * 7);
+    dev->config.receive_bits(buffer, 8);
 
+    if(buffer[0] != sak)
+        return false;
+
+    buffer[0] = SELECT_CL2;
+    buffer[1] = 0x70;
+    memcpy(buffer + 2, uid + 4, 3);
+
+    dev->config.transmit_bits(buffer, 8 * 7);
+    dev->config.receive_bits(buffer, 8);
+
+    if(buffer[0] != sak)
+        return false;
+
+    dev->connected = true;
+    memcpy(dev->uid, uid, 7);
+
+    return true;
 
 }
 
+bool NTAG21XDetect(NTAG21X* const dev) {
 
+    assert(dev);
+
+    static uint8_t buffer[2];
+    buffer[0] = REQUEST;
+
+    dev->config.transmit_bits(buffer, 7);
+    uint16_t bits = dev->config.receive_bits(buffer, 16);
+
+    if(bits == 0) // if the chips didn't send anything back
+        return false;
+
+    if(memcmp(&atqa, buffer, 2)) // if the chips didnt set back the proper atqa
+        return false;
+
+    return true; 
+
+}
 
 uint16_t NTAG21XSend(const NTAG21X* const dev, const void* const buffer, const uint16_t bits, const bool crc) {
 
@@ -348,7 +399,7 @@ NTAG21XACK NTAG21XCompWrite(const NTAG21X* const dev, const uint8_t page, const 
     buffer[0] = COMP_WRITE;
     buffer[1] = page;
 
-    NTAG21XSend(dev, buffer, 16, true);
+    NTAG21XSend(dev, buffer, 8 * 2, true);
     NTAG21XACK ack = NTAG21XRecv(dev, buffer, 4, false);
     if(ack != ACK)
         return ACK;
