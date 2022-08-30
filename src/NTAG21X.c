@@ -18,7 +18,7 @@
 static const uint16_t atqa = 0x0044;
 static const uint8_t sak = 0x00;
 
-const NTAG21XConfig NTAG21XDefaultConfig() {
+NTAG21XConfig NTAG21XDefaultConfig() {
 
     const static NTAG21XConfig config = {    
         .receive_bits = NULL,
@@ -32,7 +32,7 @@ const NTAG21XConfig NTAG21XDefaultConfig() {
     return config;
 }
 
-const NTAG21XSettings NTAG21XDefaultSettings() {
+NTAG21XSettings NTAG21XDefaultSettings() {
 
     const static NTAG21XSettings settings = {
 
@@ -67,7 +67,7 @@ NTAG21X* NTAG21XInit(NTAG21X* const dev, NTAG21XConfig* const config) {
         return NULL;
 
     // if we can't calculate crc16 then we need to be able to use hw crc to transmit and recv
-    if(config->calculate_crc16 = NULL && (config->receive_bits_crc == NULL || config->transmit_bits_crc == NULL))
+    if((config->calculate_crc16 == NULL) && (config->receive_bits_crc == NULL || config->transmit_bits_crc == NULL))
         return NULL;
 
     memcpy(&dev->config, config, sizeof(NTAG21XConfig));
@@ -161,7 +161,7 @@ uint16_t NTAG21XSend(const NTAG21X* const dev, const void* const buffer, const u
         else {
 
             static uint8_t sendbuffer[512] = {0};
-            uint16_t bytes = (bits >> 3) + (bits & 0x7 != 0); // how may bytes are needed to represent all of the data
+            uint16_t bytes = (bits >> 3) + ((bits & 0x7) != 0); // how may bytes are needed to represent all of the data
             uint8_t numbits = bits & 0x7; // how many incomplete bits there are
             
             if(numbits != 0)
@@ -170,7 +170,7 @@ uint16_t NTAG21XSend(const NTAG21X* const dev, const void* const buffer, const u
             uint16_t crcval = dev->config.calculate_crc16(buffer, bytes); // if we are doing whole bytes just to regular crc otherwise go one byte more for the bits
             
             memcpy(sendbuffer, buffer, bytes); // copy the whole array including bits as an extra byte if needed
-            memcpy(buffer + bytes, &crcval, 2);
+            memcpy((void*)(buffer + bytes), &crcval, 2);
 
             return dev->config.transmit_bits(sendbuffer, (bytes + 2) * 8);
 
@@ -200,7 +200,7 @@ NTAG21XACK NTAG21XRecv(NTAG21X* const dev, void* const buffer, const uint16_t bi
             result = dev->config.receive_bits_crc(buffer, bits);
 
         else {
-            uint16_t bytes = (bits >> 3) + (bits & 0x7 != 0); // how may bytes are needed to represent all of the data
+            uint16_t bytes = (bits >> 3) + ((bits & 0x7) != 0); // how may bytes are needed to represent all of the data
             uint8_t numbits = bits & 0x7; // how many incomplete bits there are
             
             if(numbits != 0) // we can always 
@@ -218,8 +218,8 @@ NTAG21XACK NTAG21XRecv(NTAG21X* const dev, void* const buffer, const uint16_t bi
 
             uint16_t crcval = dev->config.calculate_crc16(buffer, bytes); // if we are doing whole bytes just to regular crc otherwise go one byte more for the bits
 
-            int res = memcmp(buffer + res - 2, &crcval, 2);
-            if(!res)
+            int result = memcmp(buffer + res - 2, &crcval, 2);
+            if(!result)
                 return NAK_CRC;
 
             return ACK;
@@ -234,9 +234,11 @@ NTAG21XACK NTAG21XRecv(NTAG21X* const dev, void* const buffer, const uint16_t bi
             return ((NTAG21XACK*)buffer)[0];
         return ACK;
     }
+
+    return ACK;
 }
 
-NTAG21XACK NTAG21XWriteSettings(const NTAG21X* const dev, const NTAG21XSettings* const settings) {
+NTAG21XACK NTAG21XWriteSettings(NTAG21X* const dev, const NTAG21XSettings* const settings) {
 
     assert(dev && settings);
 
@@ -249,14 +251,14 @@ NTAG21XACK NTAG21XWriteSettings(const NTAG21X* const dev, const NTAG21XSettings*
                         chip == NTAG_216? 0xE3: 0xFF;
     
     for (uint8_t i = 0; i < 4; i++) {
-        NTAG21XACK ack = NTAG21XWrite(dev, basepage + i, settings + 4 * i);        // write the first page of the config
+        NTAG21XACK ack = NTAG21XWrite(dev, basepage + i, (void* const)(settings + 4 * i));        // write the first page of the config
         if(ack != ACK)
             return ack;
     }
     return ACK;
 }
 
-NTAG21XACK NTAG21XReadSettings(const NTAG21X* const dev, NTAG21XSettings* const settings) {
+NTAG21XACK NTAG21XReadSettings(NTAG21X* const dev, NTAG21XSettings* const settings) {
 
     assert(dev && settings);
 
@@ -388,7 +390,7 @@ NTAG21XACK NTAG21XWrite(NTAG21X* const dev, const uint8_t start, void* const dat
 
 }
 
-NTAG21XACK NTAG21XCompWrite(const NTAG21X* const dev, const uint8_t page, const uint32_t data) {
+NTAG21XACK NTAG21XCompWrite(NTAG21X* const dev, const uint8_t page, const void* const data) {
 
     assert(dev && data);
 

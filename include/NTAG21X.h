@@ -189,7 +189,7 @@ NTAG21XACK NTAG21XAutoConnect(NTAG21X* const dev);
  * \param uid
  * \return NTAG21XACK 
  */
-NTAG21XACK NTAG21XConnect(NTAG21X* const dev, const uint8_t uid[7]);
+bool NTAG21XConnect(NTAG21X* const dev, const uint8_t uid[7]);
 
 /**
  * \brief 
@@ -206,14 +206,14 @@ NTAG21XACK NTAG21XDisconnnect(NTAG21X* const dev);
  * 
  * \return NTAG21XConfig 
  */
-const NTAG21XConfig NTAG21XDefaultConfig();
+NTAG21XConfig NTAG21XDefaultConfig();
 
 /**
  * \brief 
  * 
  * \return NTAG21XSettings 
  */
-const NTAG21XSettings NTAG21XDefaultSettings();
+NTAG21XSettings NTAG21XDefaultSettings();
 
 /**
  * \brief 
@@ -273,7 +273,7 @@ NTAG21XACK NTAG21XRecv(NTAG21X* const dev, void* const buffer, const uint16_t bi
  * \param settings
  * \return NTAG21XACK 
  */
-NTAG21XACK NTAG21XWriteSettings(const NTAG21X* const dev, const NTAG21XSettings* const settings);
+NTAG21XACK NTAG21XWriteSettings(NTAG21X* const dev, const NTAG21XSettings* const settings);
 
 /**
  * \brief 
@@ -300,7 +300,7 @@ NTAG21XACK NTAG21XGetVersion(NTAG21X* const dev, NTAG21XVersion* const version);
  * \param settings
  * \return NTAG21XACK 
  */
-NTAG21XACK NTAG21XReadSettings(const NTAG21X* const dev, NTAG21XSettings* const settings);
+NTAG21XACK NTAG21XReadSettings(NTAG21X* const dev, NTAG21XSettings* const settings);
 
 /**
  * \brief 
@@ -368,6 +368,6 @@ NTAG21XACK NTAG21XWrite(NTAG21X* const dev, const uint8_t start, void* const dat
  * \param data
  * \return NTAG21XACK 
  */
-NTAG21XACK NTAG21XCompWrite(NTAG21X* const dev, const uint8_t page, const void* const data);
+NTAG21XACK NTAG21XCompWrite(NTAG21X* const dev, const uint8_t page, const void* constdata);
 
 #endif
